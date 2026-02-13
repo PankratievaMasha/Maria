@@ -1,0 +1,39 @@
+# Корабли и судостроительные фирмы с полным набором свойств: название компании,страна, количество построенных кораблей, средняя длина корабля, год постройки самого нового корабля
+# Ships and shipbuilding companies with a full set of properties: company name, country, number of ships built, average ship length, year of construction of the newest ship
+SELECT 
+  ?companyLabel                    # 1. Название компании
+  ?countryLabel                     # 2. Страна
+  (COUNT(?ship) AS ?shipsBuilt)     # 3. Количество построенных кораблей
+  (AVG(?length) AS ?avgLength)      # 4. Средняя длина кораблей (м)
+  (MAX(?yearBuilt) AS ?latestYear)  # 5. Год постройки самого нового корабля
+WHERE {
+  # Найти любой корабль
+  ?ship wdt:P31/wdt:P279* wd:Q11446.
+  
+  # Найти его производителя
+  ?ship wdt:P176 ?company.
+  
+  # Получить длину корабля (если есть)
+  OPTIONAL { ?ship wdt:P2043 ?length. }
+  
+  # Получить год постройки (через дату спуска на воду или ввода в эксплуатацию)
+  OPTIONAL { 
+    ?ship wdt:P571 ?inception.
+    BIND(YEAR(?inception) AS ?yearBuilt)
+  }
+  OPTIONAL { 
+    ?ship wdt:P729 ?serviceEntry.
+    BIND(YEAR(?serviceEntry) AS ?yearBuilt)
+  }
+  
+  # Получить страну производителя (если есть)
+  OPTIONAL { ?company wdt:P17 ?country. }
+  
+  # Получить читаемые названия на русском
+  SERVICE wikibase:label { 
+    bd:serviceParam wikibase:language "ru". 
+  }
+}
+GROUP BY ?company ?companyLabel ?countryLabel
+HAVING (COUNT(?ship) >= 3)
+ORDER BY DESC(?shipsBuilt)
