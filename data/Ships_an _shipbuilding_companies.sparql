@@ -1,52 +1,38 @@
 # Корабли и судостроительные фирмы с полным набором свойств: название компании,страна, количество построенных кораблей, средняя длина корабля, год постройки самого нового корабля
 # Ships and shipbuilding companies with a full set of properties: company name, country, number of ships built, average ship length, year of construction of the newest ship
-SELECT 
-  ?company
-  ?companyLabel
-  ?countryLabel
-  ?shipsBuilt
-  ?avgLength
-  ?latestYear
-  ?coordinates
+# Ships and shipbuilding companies: size class distribution per company
+# Корабли и судостроительные верфи: распределение по классам размеров
+SELECT ?company ?companyLabel ?countryLabel ?shipsBuilt ?sizeClass
+       (COUNT(?ship) AS ?shipsInClass)
 WHERE {
   {
-    SELECT 
-      ?company
-      ?country
-      (COUNT(?ship) AS ?shipsBuilt)
-      (AVG(?length) AS ?avgLength)
-      (MAX(?yearBuilt) AS ?latestYear)
-      (SAMPLE(?coords) AS ?coordinates)
+    SELECT ?company ?country (COUNT(?ship) AS ?shipsBuilt)
     WHERE {
-      ?ship wdt:P31/wdt:P279* wd:Q11446.      # wd:Q11446 - корабль (ship)
-      ?ship wdt:P176 ?company.                  # wdt:P176 - производитель (manufacturer)
-      
-      OPTIONAL { ?ship wdt:P2043 ?length. }     # wdt:P2043 - длина (length)
-      OPTIONAL { ?ship wdt:P571 ?inception. BIND(YEAR(?inception) AS ?yearBuilt) }  # wdt:P571 - дата основания/создания (inception)
-      OPTIONAL { ?ship wdt:P729 ?serviceEntry. BIND(YEAR(?serviceEntry) AS ?yearBuilt) }  # wdt:P729 - дата ввода в эксплуатацию (service entry)
-      
-      OPTIONAL { ?company wdt:P17 ?country. }   # wdt:P17 - страна (country)
-      
-      # === ПОЛУЧЕНИЕ КООРДИНАТ (три способа) ===
-      OPTIONAL { ?company wdt:P625 ?coord1. }   # wdt:P625 - координаты (coordinate location)
-      
-      OPTIONAL { 
-        ?company wdt:P159 ?hq.                   # wdt:P159 - штаб-квартира (headquarters location)
-        ?hq wdt:P625 ?coord2.                    # wdt:P625 - координаты места (coordinate location)
-      }
-      
-      OPTIONAL { 
-        ?company wdt:P740 ?location.              # wdt:P740 - место основания (location of formation)
-        ?location wdt:P625 ?coord3.                # wdt:P625 - координаты места (coordinate location)
-      }
-      
-      BIND(COALESCE(?coord1, ?coord2, ?coord3) AS ?coords)
+      ?ship wdt:P31/wdt:P279* wd:Q11446;
+            wdt:P176 ?company.
+      OPTIONAL { ?company wdt:P17 ?country. }
     }
     GROUP BY ?company ?country
     HAVING (COUNT(?ship) >= 3)
   }
-  
-  # Получение названий (краткая форма)
+
+  ?ship wdt:P31/wdt:P279* wd:Q11446;
+        wdt:P176 ?company;
+        wdt:P2043 ?length.                        # только корабли с указанной длиной
+
+  BIND(
+    IF(?length < 25,   "1_малое (<25м)",           # лодки, катера
+    IF(?length < 100,  "2_прибрежное (25-100м)",   # буксиры, паромы, корветы
+    IF(?length < 130,  "3_mini-handy (100-130м)",  # малые грузовые
+    IF(?length < 180,  "4_handysize (130-180м)",   # сухогрузы, фрегаты
+    IF(?length < 200,  "5_handymax (180-200м)",    # балкеры, эсминцы
+    IF(?length < 295,  "6_panamax (200-295м)",     # контейнеровозы, крейсеры
+    IF(?length < 330,  "7_capesize (295-330м)",    # танкеры, авианосцы
+                       "8_vlcc и крупнее (>330м)"  # супертанкеры, авианосцы США
+    ))))))) AS ?sizeClass)
+
+  OPTIONAL { ?company wdt:P17 ?country. }
+
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ru,en" }
 }
-ORDER BY DESC(?shipsBuilt)
+GROUP BY ?company ?companyLabel ?countryLabel ?shipsBuilt ?sizeClass
