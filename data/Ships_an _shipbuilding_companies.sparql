@@ -1,5 +1,3 @@
-# Корабли и судостроительные фирмы с полным набором свойств: название компании,страна, количество построенных кораблей, средняя длина корабля, год постройки самого нового корабля
-# Ships and shipbuilding companies with a full set of properties: company name, country, number of ships built, average ship length, year of construction of the newest ship
 # Ships and shipbuilding companies: size class distribution per company
 # Корабли и судостроительные верфи: распределение по классам размеров
 SELECT ?company ?companyLabel ?countryLabel ?shipsBuilt ?sizeClass
